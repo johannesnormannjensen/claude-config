@@ -29,7 +29,7 @@ if [ -n "$used_pct" ]; then
   else
     ctx_color="${GREEN}"
   fi
-  context_colored="${DIM}Context:${RESET} ${BOLD}${ctx_color}${used_pct_int}%%${RESET}"
+  context_colored="${DIM}Context:${RESET} ${BOLD}${ctx_color}${used_pct_int}%${RESET}"
 else
   context_colored="${DIM}Context: -${RESET}"
 fi
