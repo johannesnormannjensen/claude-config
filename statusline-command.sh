@@ -45,13 +45,10 @@ if [ -n "$cost_usd" ]; then
 else
   cost_colored="${DIM}\$-${RESET}"
 fi
-# Total tokens used — sum across all assistant turns in the transcript
-transcript_path=$(echo "$input" | jq -r '.transcript_path // empty')
-tokens_total=0
-if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
-  tokens_total=$(jq -r 'try (.message.usage | (.input_tokens // 0) + (.output_tokens // 0) + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0)) // empty' "$transcript_path" 2>/dev/null \
-    | awk '{s+=$1} END{print s+0}')
-fi
+# Tokens currently in the context window — from the most recent API response
+# (input includes cache reads/writes), so this tracks the used_percentage above
+# rather than cumulative lifetime usage.
+tokens_total=$(echo "$input" | jq -r '(.context_window.total_input_tokens // 0) + (.context_window.total_output_tokens // 0)')
 if [ "$tokens_total" -ge 1000000 ]; then
   tokens_fmt=$(awk -v t="$tokens_total" 'BEGIN{printf "%.1fM", t/1000000}')
 elif [ "$tokens_total" -ge 1000 ]; then
