@@ -52,25 +52,12 @@ if ($null -ne $costUsd) {
     $costColored = "${DIM}`$-${RESET}"
 }
 
-# Total tokens used — sum across all assistant turns in the transcript
-$transcriptPath = $data.transcript_path
-$tokensTotal = [long]0
-if ($transcriptPath -and (Test-Path -LiteralPath $transcriptPath)) {
-    Get-Content -LiteralPath $transcriptPath | ForEach-Object {
-        if (-not $_) { return }
-        try {
-            $entry = $_ | ConvertFrom-Json -ErrorAction Stop
-            $usage = $entry.message.usage
-            if ($usage) {
-                $inTok = if ($usage.input_tokens) { [long]$usage.input_tokens } else { [long]0 }
-                $outTok = if ($usage.output_tokens) { [long]$usage.output_tokens } else { [long]0 }
-                $cacheCreate = if ($usage.cache_creation_input_tokens) { [long]$usage.cache_creation_input_tokens } else { [long]0 }
-                $cacheRead = if ($usage.cache_read_input_tokens) { [long]$usage.cache_read_input_tokens } else { [long]0 }
-                $tokensTotal += $inTok + $outTok + $cacheCreate + $cacheRead
-            }
-        } catch {}
-    }
-}
+# Tokens currently in the context window — from the most recent API response
+# (input includes cache reads/writes), so this tracks the used_percentage above
+# rather than cumulative lifetime usage.
+$inTok = if ($data.context_window.total_input_tokens) { [long]$data.context_window.total_input_tokens } else { [long]0 }
+$outTok = if ($data.context_window.total_output_tokens) { [long]$data.context_window.total_output_tokens } else { [long]0 }
+$tokensTotal = $inTok + $outTok
 
 if ($tokensTotal -ge 1000000) {
     $tokensFmt = "{0:F1}M" -f ($tokensTotal / 1000000.0)
