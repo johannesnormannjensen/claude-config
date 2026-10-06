@@ -41,8 +41,24 @@ if [ -d "$SCRIPT_DIR/skills" ]; then
   for skill_dir in "$SCRIPT_DIR/skills"/*/; do
     [ -d "$skill_dir" ] || continue
     skill_name=$(basename "$skill_dir")
-    ln -sfn "$skill_dir" "$CLAUDE_DIR/skills/$skill_name"
+    target="$CLAUDE_DIR/skills/$skill_name"
+    # A real directory there would swallow the link (ln puts it inside); leave it to the user.
+    if [ -d "$target" ] && [ ! -L "$target" ]; then
+      echo "  Skipped skill: $skill_name ($target exists and is not a link; move it away and re-run)"
+      continue
+    fi
+    ln -sfn "${skill_dir%/}" "$target"
     echo "  Linked skill: $skill_name"
+  done
+fi
+
+# Workflows — symlink each workflow script
+if [ -d "$SCRIPT_DIR/workflows" ]; then
+  mkdir -p "$CLAUDE_DIR/workflows"
+  for wf in "$SCRIPT_DIR/workflows"/*.js; do
+    [ -f "$wf" ] || continue
+    ln -sf "$wf" "$CLAUDE_DIR/workflows/$(basename "$wf")"
+    echo "  Linked workflow: $(basename "$wf")"
   done
 fi
 
