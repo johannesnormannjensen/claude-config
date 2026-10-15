@@ -40,7 +40,7 @@ Six plugins are enabled:
 
 - **Omarchy** — comprehensive knowledge of the [Omarchy](https://omarchy.com) Linux desktop environment (Arch Linux + Hyprland), including safe configuration patterns, command discovery, and troubleshooting.
 
-### Crew workflow (`skills/crew/`, `workflows/crew.js`)
+### Crew workflow (`skills/crew/`, `workflows/crew.js`, `workflows/preview.js`)
 
 `/crew <request>` turns one feature request into a finished branch, in any git repo: a game, a web
 app, a CLI, a library. It runs on its own git worktree, so you keep working (or run several
@@ -49,29 +49,42 @@ crews at once) while it goes:
 1. **Research:** three agents in parallel. *Prior art* (how well-regarded projects solve it),
    *craft* (typical numbers, failure modes, how to measure quality) and an *audit* of your code
    (file:line pointers to what causes the problem today).
-2. **Plan:** at most 3 vertical slices, each with objective acceptance checks. Open design
+2. **Plan:** as few vertical slices as the work needs (at most 3), each with objective acceptance checks. Open design
    choices get a sensible default, listed as `decisions` for you to overrule.
 3. **Implement + review:** per slice, an implementer, then a strict reviewer who re-runs your
-   gates and looks at the screenshots, then one fix round if needed. A final reviewer checks the
-   whole branch.
+   gates and looks at what the change shows (a screenshot, sample output), then one fix round if needed. An implementer that runs
+   out of turns hands off to a fresh one that starts from the uncommitted diff (at most twice). With more than one slice, a
+   final reviewer checks the whole branch.
 4. **You merge.** Claude verifies the branch itself, then merges it `--no-ff`. The crew never merges.
+   The crew's notes (`.claude/research/`) stay on the branch; the merge commit message carries
+   the conclusion: what landed, the decisions made for you, what is untested.
 
 Setup per repo is one file, `.claude/crew.md`: what the project is, its rules, and its gate,
 test and evidence commands. Run `/crew init` and Claude drafts it from your README, manifests
 and CI config, runs the commands to check them, and asks you to confirm. Template:
 [`skills/crew/crew-template.md`](skills/crew/crew-template.md). Examples:
-[web app](skills/crew/examples/web-app.md), [game](skills/crew/examples/game.md).
+[web app](skills/crew/examples/web-app.md), [game](skills/crew/examples/game.md),
+[compiler](skills/crew/examples/compiler.md). Its "Show it" section says what a person looks at
+to judge a change: screenshots for a website or game, saved output for a compiler or CLI, or none.
 
 | Command | What it does |
 |---------|--------------|
 | `/crew init` | write and commit `.claude/crew.md` for this repo |
 | `/crew <request>` | full run, about 1 hour |
 | `/crew quick: <request>` | skip outside research (code audit only), about 30 minutes |
+| `/crew preview: <request>` | one agent builds the smallest change worth showing (a screenshot, sample output), so you can judge it first |
+| "start T12" | start a ticket; its `workflow:` field (preview, crew:quick, crew:full) picks the run |
+| "continue" | resume stopped crews found in `git worktree list` |
 
 Needs Claude Code with the Workflow tool, and git. Agents commit after every step (and push if
 the branch has an upstream), so a shutdown loses little: ask Claude to resume the run. If a
-slice fails review twice, the crew stops and hands back the remaining slices. Claude can
-continue from there without redoing research and planning.
+slice fails review twice, the crew stops and returns `resume` args. Claude resumes from there
+without redoing research and planning: from the reviewer's fix list, or with a review first when
+there is none, so finished work isn't rebuilt.
+Run at most two crews at once. Start a crew in a message that says only that: the Workflow tool
+shows every agent your latest chat message, so a crew launched while you talk about something
+else can build the wrong thing. `skills/crew/crew-stats.py` prints run times, review outcomes
+and cut-off implementers from the workflow records.
 
 ## Installation
 
@@ -108,12 +121,16 @@ After running the script, install each listed plugin inside a Claude Code sessio
 ├── .mcp.json                  # MCP server configuration
 ├── statusline-command.sh      # Custom status line script
 ├── workflows/
-│   └── crew.js                # Crew workflow: research → plan → implement → review
+│   ├── crew.js                # Crew workflow: research → plan → implement → review (and resume)
+│   └── preview.js             # One agent, one artifact to judge before building
 └── skills/
+    ├── crew-ticket/
+    │   └── SKILL.md           # /crew-ticket: idea → questions → ticket a crew can run
     ├── crew/
     │   ├── SKILL.md           # /crew command: setup, launch, verify, merge, recover
     │   ├── crew-template.md   # Per-repo .claude/crew.md template
-    │   └── examples/          # crew.md for a web app and a game
+    │   ├── crew-stats.py      # Crew run statistics from the workflow records
+    │   └── examples/          # crew.md for a web app, a game and a compiler
     └── omarchy/
         └── SKILL.md           # Omarchy desktop environment skill
 ```
