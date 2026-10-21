@@ -86,6 +86,28 @@ shows every agent your latest chat message, so a crew launched while you talk ab
 else can build the wrong thing. `skills/crew/crew-stats.py` prints run times, review outcomes
 and cut-off implementers from the workflow records.
 
+### herdr (`herdr/config.toml`)
+
+Config for the [herdr](https://github.com/herdrdev/herdr) terminal multiplexer, with keybinds that mirror
+the Omarchy tmux setup (workspace = tmux session, tab = window, pane = pane). Prefix is `Ctrl+Space`.
+
+| Keys | Action |
+|------|--------|
+| `prefix h` / `prefix v`, `Alt+Shift+Enter` | split horizontal / vertical |
+| `prefix x`, `Alt+Esc` | close pane |
+| `prefix z` / `prefix ;` | zoom / last pane |
+| `Ctrl+Alt+arrows` | focus pane |
+| `Ctrl+Alt+Shift+arrows` | resize pane |
+| `prefix c` / `prefix r` / `prefix k` | new / rename / close tab |
+| `prefix 1..9`, `Alt+1..9` | switch tab |
+| `prefix p`/`n`, `Alt+Left`/`Right` | previous / next tab |
+| `Alt+Shift+Left`/`Right` | move tab |
+| `prefix C` / `prefix R` / `prefix K` | new / rename / close workspace |
+| `prefix P`/`N`, `Alt+Up`/`Down` | previous / next workspace |
+| `prefix O` | rename pane |
+| `prefix [` | copy mode |
+| `prefix q` / `prefix ?` / `prefix d` | reload config / help / detach |
+
 ## Installation
 
 **Prerequisite:** [jq](https://jqlang.github.io/jq/) must be installed.
@@ -104,7 +126,8 @@ The install script:
 4. Merges `.mcp.json` into your existing MCP configuration
 5. Symlinks all skill directories into `~/.claude/skills/` (skips any that already exist as a real directory)
 6. Symlinks the workflow scripts into `~/.claude/workflows/`
-7. Prints plugin installation commands to run manually inside Claude Code
+7. Symlinks `herdr/config.toml` into `~/.config/herdr/` (skips an existing real file)
+8. Prints plugin installation commands to run manually inside Claude Code
 
 After running the script, install each listed plugin inside a Claude Code session:
 
@@ -120,6 +143,8 @@ After running the script, install each listed plugin inside a Claude Code sessio
 ├── settings.json              # Claude Code settings (plugins, status line)
 ├── .mcp.json                  # MCP server configuration
 ├── statusline-command.sh      # Custom status line script
+├── herdr/
+│   └── config.toml            # herdr keybinds and UI (mirrors Omarchy tmux)
 ├── workflows/
 │   ├── crew.js                # Crew workflow: research → plan → implement → review (and resume)
 │   └── preview.js             # One agent, one artifact to judge before building

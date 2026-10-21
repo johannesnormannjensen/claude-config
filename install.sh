@@ -62,6 +62,16 @@ if [ -d "$SCRIPT_DIR/workflows" ]; then
   done
 fi
 
+# herdr — symlink the config (keybinds mirror the Omarchy tmux setup)
+HERDR_DIR="$HOME/.config/herdr"
+mkdir -p "$HERDR_DIR"
+if [ -f "$HERDR_DIR/config.toml" ] && [ ! -L "$HERDR_DIR/config.toml" ]; then
+  echo "  Skipped herdr config ($HERDR_DIR/config.toml exists; move it away and re-run)"
+else
+  ln -sf "$SCRIPT_DIR/herdr/config.toml" "$HERDR_DIR/config.toml"
+  echo "  Linked herdr/config.toml"
+fi
+
 # Plugins — install from official marketplace
 PLUGINS=(
   "superpowers"
