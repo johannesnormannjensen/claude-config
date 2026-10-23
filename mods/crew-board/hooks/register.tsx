@@ -83,14 +83,17 @@ async function onNotice($: Engine, text: string) {
   }
 }
 
-async function worktrees(git: Run): Promise<Worktree[]> {
+async function worktrees(git: Run, nowMs: number): Promise<Worktree[]> {
   const out: Worktree[] = []
   for (const block of (await git(['worktree', 'list', '--porcelain'])).split('\n\n')) {
     const path = /^worktree (.+)$/m.exec(block)?.[1] ?? ''
     const branch = /^branch refs\/heads\/(.+)$/m.exec(block)?.[1] ?? ''
     if (!path.includes('/.claude/worktrees/') || !branch) continue
     const [age = '', last = ''] = (await git(['log', '-1', '--format=%cr|%s', branch])).trim().split('|')
-    out.push({ slug: path.split('/').pop() ?? path, branch, last, age })
+    // The worktree's own HEAD reflog: its creation and every commit in it, from any session.
+    const movedSec = Number(/\{(\d+)\}/.exec(await git(['-C', path, 'reflog', '-1', '--date=unix', '--format=%gd']))?.[1] ?? 0)
+    const isActive = nowMs - movedSec * 1000 < activeHours * 3600_000
+    out.push({ slug: path.split('/').pop() ?? path, branch, last, age, isActive })
   }
   return out
 }
@@ -122,6 +125,7 @@ async function version($: Engine): Promise<string> {
 let tracker = ''
 let toTestHeading = ''
 let maxSlots = 0
+let activeHours = 0
 let toTestLimit = 0
 let start = /$^/
 let guardAgent = ''
@@ -153,7 +157,7 @@ async function build($: Engine): Promise<Board> {
   const sinceRelease = hash ? Number((await git(['rev-list', '--count', `${hash}..HEAD`])).trim()) : 0
   return {
     root,
-    worktrees: await worktrees(git),
+    worktrees: await worktrees(git, await $.clock.now()),
     toTest: status.toTest,
     tickets: status.tickets,
     version: await version($),
@@ -177,8 +181,9 @@ async function guard($: Engine, what: string): Promise<string | undefined> {
     return `crew-board: ${what} needs the owner's start message ("start T12"); the latest is: "${said.slice(0, 80)}". Say what is next and wait.`
   }
   const b = await refresh($)
-  if (b.worktrees.length > maxSlots) {
-    return `crew-board: ${b.worktrees.length} worktrees (${b.worktrees.map(w => w.slug).join(', ')}) is past the ${maxSlots}-slot limit.`
+  const active = b.worktrees.filter(w => w.isActive)
+  if (active.length > maxSlots) {
+    return `crew-board: ${active.length} active worktrees (${active.map(w => w.slug).join(', ')}) is past the ${maxSlots}-slot limit.`
   }
   return undefined
 }
@@ -187,6 +192,7 @@ export const register: Register = (on, options) => {
   tracker = String(options.tracker)
   toTestHeading = String(options.toTestHeading)
   maxSlots = Number(options.maxSlots)
+  activeHours = Number(options.activeHours)
   toTestLimit = Number(options.toTestLimit)
   // The owner's start words: a launch only in the turn whose message is the start.
   start = new RegExp(`\\b(${String(options.startWords)})\\b`, 'i')
@@ -213,8 +219,9 @@ export const register: Register = (on, options) => {
   on('prompt.submit', async ($, e, next) => {
     if (NOTICE.test(e.text)) {
       await onNotice($, e.text)
-    } else if (!e.isMeta && !e.command) {
-      await update($, lastPrompt, () => e.text)
+    } else if (!e.isMeta && (!e.command || e.command.name === 'crew')) {
+      // `/crew …` is itself a start; other slash commands are not the owner's latest word.
+      await update($, lastPrompt, () => (e.command ? `start: /crew ${e.command.args}` : e.text))
       const now = await $.clock.now()
       if (turnEndedAt) add(times.cats, OWNER_WAIT, Math.min(now - turnEndedAt, MAX_OWNER_MS))
       turnEndedAt = 0
@@ -279,7 +286,8 @@ export const register: Register = (on, options) => {
     const t = await read($, timesAtom)
     if (b === null) return <Text dimColor>Loading the crew board…</Text>
     if (!b.root) return <Text dimColor>Not in a git repo.</Text>
-    const slots = Math.min(b.worktrees.length, maxSlots)
+    const active = b.worktrees.filter(w => w.isActive)
+    const idle = b.worktrees.length - active.length
     const isOver = b.toTest > toTestLimit
     const cats = Object.entries(t?.cats ?? {}).sort((x, y) => y[1].ms - x[1].ms)
     const work = cats.filter(([k]) => k !== OWNER_WAIT)
@@ -290,16 +298,17 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column">
         <Text bold>
-          Slots {b.worktrees.length}/{maxSlots}
-          {b.worktrees.length > maxSlots ? '  (over!)' : slots === maxSlots ? '  (full)' : ''}
+          Slots {active.length}/{maxSlots}
+          {active.length > maxSlots ? '  (over!)' : active.length === maxSlots ? '  (full)' : ''}
         </Text>
-        {b.worktrees.length === 0 && <Text dimColor>  nothing running</Text>}
-        {b.worktrees.map(w => (
+        {active.length === 0 && <Text dimColor>  nothing running</Text>}
+        {active.map(w => (
           <Text>
             {'  '}
             {w.slug} <Text dimColor>· {w.age} · {w.last.slice(0, 50)}</Text>
           </Text>
         ))}
+        {idle > 0 && <Text dimColor>  {idle} idle worktrees (no move in {activeHours}h)</Text>}
         <Text> </Text>
         <Text bold color={isOver ? 'yellow' : undefined}>
           {toTestHeading} {b.toTest}/{toTestLimit}

@@ -1,6 +1,6 @@
 {
   "name": "crew-board",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Crew board: running worktrees, To test count, open tickets, last release, where the time goes; guards crew launches",
   "author": { "name": "Johannes Normann Jensen" },
   "types": "./types/index.d.ts",
@@ -20,8 +20,14 @@
     "maxSlots": {
       "type": "number",
       "title": "Slot limit",
-      "description": "Most worktrees under .claude/worktrees at once; a crew launch past it is refused",
+      "description": "Most active worktrees under .claude/worktrees at once; a crew launch past it is refused",
       "default": 2
+    },
+    "activeHours": {
+      "type": "number",
+      "title": "Active window (hours)",
+      "description": "A worktree whose HEAD moved within this many hours is active and takes a slot; older ones are idle and only counted",
+      "default": 3
     },
     "toTestLimit": {
       "type": "number",

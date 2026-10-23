@@ -95,13 +95,14 @@ play-check limit, "start what makes sense" starts nothing that lands, and a test
 
 ### Crew board mod (`mods/crew-board/`)
 
-A Claude Code mod for the crew workflow. `/crew-board` opens a pane with the running worktrees
-(slots used), the "To test" count, open tickets, the version (Cargo.toml or package.json) and
+A Claude Code mod for the crew workflow. `/crew-board` opens a pane with the active worktrees
+(slots used: HEAD moved within the active window; older ones are only counted as idle), the "To test" count, open tickets, the version (Cargo.toml or package.json) and
 the last release commit, and **where the time goes**: tool time by kind (tests, build + lint,
 git, reading, editing, thinking), whole-run wall clock per agent or workflow, the slowest single
 calls and time spent waiting on you. It refuses a crew launch in a turn whose latest owner
-message is not a start (background-task notices never count), and past the slot limit.
-Options (`/config`): tracker path, "To test" heading, slot limit, play-check limit, start
+message is not a start (background-task notices never count; a `/crew …` command is one), and
+past the slot limit.
+Options (`/config`): tracker path, "To test" heading, slot limit, active window, play-check limit, start
 words, a guarded agent type, the release-commit pattern and extra `label=regex` shell kinds.
 `install.sh` installs it from this folder; elsewhere:
 

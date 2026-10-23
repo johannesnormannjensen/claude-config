@@ -1,4 +1,5 @@
-export type Worktree = { slug: string; branch: string; last: string; age: string }
+/** `isActive`: HEAD moved within the activeHours window, so the worktree takes a slot. */
+export type Worktree = { slug: string; branch: string; last: string; age: string; isActive: boolean }
 export type Ticket = { num: number; title: string; workflow: string; isParked: boolean }
 export type Board = {
   /** The main checkout's path; empty when the session is not in a git repo. */
