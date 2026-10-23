@@ -73,7 +73,7 @@ to judge a change: screenshots for a website or game, saved output for a compile
 | `/crew <request>` | full run, about 1 hour |
 | `/crew quick: <request>` | skip outside research (code audit only), about 30 minutes |
 | `/crew preview: <request>` | one agent builds the smallest change worth showing (a screenshot, sample output), so you can judge it first |
-| "start T12" | start a ticket; its `workflow:` field (preview, crew:quick, crew:full) picks the run |
+| "start T12" | start a ticket; its `workflow:` field (preview, fast, crew:quick, crew:full) picks the run |
 | "continue" | resume stopped crews found in `git worktree list` |
 
 Needs Claude Code with the Workflow tool, and git. Agents commit after every step (and push if
@@ -85,6 +85,29 @@ Run at most two crews at once. Start a crew in a message that says only that: th
 shows every agent your latest chat message, so a crew launched while you talk about something
 else can build the wrong thing. `skills/crew/crew-stats.py` prints run times, review outcomes
 and cut-off implementers from the workflow records.
+
+The planner runs on Fable; a Sonnet wrap-up agent ends a passed run with a landing note (version
+bump, what to show, changelog and "To test" lines) that Claude applies when it merges. Small,
+clear tickets take the **fast lane** (`workflow: fast`): one implementer, no planner or reviewer,
+merged by hand, two tries and then parked for you. crew.md's optional "Fast lane and test
+batches" section sets a "To test" list of landed changes you still have to check; past its
+play-check limit, "start what makes sense" starts nothing that lands, and a test batch runs alone.
+
+### Crew board mod (`mods/crew-board/`)
+
+A Claude Code mod for the crew workflow. `/crew-board` opens a pane with the running worktrees
+(slots used), the "To test" count, open tickets, the version (Cargo.toml or package.json) and
+the last release commit, and **where the time goes**: tool time by kind (tests, build + lint,
+git, reading, editing, thinking), whole-run wall clock per agent or workflow, the slowest single
+calls and time spent waiting on you. It refuses a crew launch in a turn whose latest owner
+message is not a start (background-task notices never count), and past the slot limit.
+Options (`/config`): tracker path, "To test" heading, slot limit, play-check limit, start
+words, a guarded agent type, the release-commit pattern and extra `label=regex` shell kinds.
+`install.sh` installs it from this folder; elsewhere:
+
+```
+/plugin install crew-board --marketplace johannesnormannjensen/claude-config
+```
 
 ### herdr (`herdr/config.toml`)
 
@@ -127,7 +150,8 @@ The install script:
 5. Symlinks all skill directories into `~/.claude/skills/` (skips any that already exist as a real directory)
 6. Symlinks the workflow scripts into `~/.claude/workflows/`
 7. Symlinks `herdr/config.toml` into `~/.config/herdr/` (skips an existing real file)
-8. Prints plugin installation commands to run manually inside Claude Code
+8. Adds this folder as a plugin marketplace and installs the `crew-board` mod from it
+9. Prints plugin installation commands to run manually inside Claude Code
 
 After running the script, install each listed plugin inside a Claude Code session:
 
@@ -145,6 +169,10 @@ After running the script, install each listed plugin inside a Claude Code sessio
 ├── statusline-command.sh      # Custom status line script
 ├── herdr/
 │   └── config.toml            # herdr keybinds and UI (mirrors Omarchy tmux)
+├── .claude-plugin/
+│   └── marketplace.json       # Lists the mods under mods/
+├── mods/
+│   └── crew-board/            # /crew-board pane + crew launch guard
 ├── workflows/
 │   ├── crew.js                # Crew workflow: research → plan → implement → review (and resume)
 │   └── preview.js             # One agent, one artifact to judge before building

@@ -49,6 +49,7 @@ Agents run only the commands this file names, so every section is filled: a real
 ## Workflow field (optional)
 One value per ticket, written by the crew-ticket skill and confirmed by the owner:
 - `workflow: preview` — one "Show it" artifact to judge before building; the ticket stays open.
+- `workflow: fast` — one implementer, no planner or reviewer, landed by hand; for small, clear tickets.
 - `workflow: crew:quick` — read this repo, build, review.
 - `workflow: crew:full` — default. The same build after web research.
 <Tickets without the field: how to read older wording. A ticket saying "verify" or "no code" is
@@ -56,3 +57,16 @@ never auto-started. Or omit the section.>
 
 ## Verify before merge
 - `<commands the orchestrator runs on the merged branch before merging to the default branch>`
+
+## Landing (optional)
+- <what the wrap-up note holds besides bump and artifacts, and where the orchestrator applies it:
+  e.g. a CHANGELOG.md line, a README feature line, a "To test" line in the tracker for what only
+  a person can judge (feel, looks). Or omit>
+
+## Fast lane and test batches (optional)
+- To test: <tracker section listing landed changes a person still has to check, e.g.
+  `docs/status.md` "## To test", one `- ` line each. Or omit the section>
+- Play-check limit: <N; while "To test" holds more lines, a bare "start what makes sense" starts
+  nothing that lands on the default branch>
+- Test batch: <when it runs (e.g. at ~5 lines, before a release), alone, and what it runs: the slow
+  suites, a review of the combined diff, the owner's session. A line clears only when the batch covered it>

@@ -59,8 +59,9 @@ The tracker's location is under "Tickets" in `.claude/crew.md`. Without one, ask
 pull first. Take the next free number from the tracker as it is now (other sessions add tickets too). One entry:
 
 - **Title** (owner date, one workflow value, after/before which tickets). Copy only the value
-  from the "Workflow field" section, written as `workflow: preview`, `workflow: crew:quick`, or
-  `workflow: crew:full`. That field wins over a conflicting sentence in the body.
+  from the "Workflow field" section, written as `workflow: preview`, `workflow: fast`,
+  `workflow: crew:quick`, or `workflow: crew:full`. Do not copy the explanation after it. That
+  field wins over a conflicting sentence in the body.
 - what and why, in the owner's terms, then the confirmed decisions as concrete rules
 - pointers: files and constants the crew starts from
 - out of scope and open ideas

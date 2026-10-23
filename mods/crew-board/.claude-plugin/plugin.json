@@ -1,0 +1,57 @@
+{
+  "name": "crew-board",
+  "version": "0.2.0",
+  "description": "Crew board: running worktrees, To test count, open tickets, last release, where the time goes; guards crew launches",
+  "author": { "name": "Johannes Normann Jensen" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "tracker": {
+      "type": "string",
+      "title": "Ticket tracker",
+      "description": "Tracker file, relative to the repo root: numbered `N. **Title** … workflow: x` entries and a To test section",
+      "default": "docs/status.md"
+    },
+    "toTestHeading": {
+      "type": "string",
+      "title": "To test heading",
+      "description": "Heading of the tracker section whose `- ` lines a person still has to check",
+      "default": "To test"
+    },
+    "maxSlots": {
+      "type": "number",
+      "title": "Slot limit",
+      "description": "Most worktrees under .claude/worktrees at once; a crew launch past it is refused",
+      "default": 2
+    },
+    "toTestLimit": {
+      "type": "number",
+      "title": "Play-check limit",
+      "description": "Above this many To test lines the board warns that the owner names every start",
+      "default": 6
+    },
+    "startWords": {
+      "type": "string",
+      "title": "Start words",
+      "description": "Regex alternatives (case-insensitive, whole words) the owner's latest message must hold for a crew launch",
+      "default": "start|build|go ahead|yes|continue|land"
+    },
+    "guardAgent": {
+      "type": "string",
+      "title": "Guarded agent type",
+      "description": "An Agent subagent_type launched only in a start turn too (the fast-lane implementer); empty guards none",
+      "default": ""
+    },
+    "releaseGrep": {
+      "type": "string",
+      "title": "Release commit pattern",
+      "description": "Extended regex for the subject of the last release commit",
+      "default": "^(chore|docs)\\(release\\)"
+    },
+    "shellKinds": {
+      "type": "string",
+      "title": "Extra shell kinds",
+      "description": "`label=regex` pairs separated by `;`, checked before the built-in tests / build + lint / landing + git kinds",
+      "default": ""
+    }
+  }
+}

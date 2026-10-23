@@ -72,6 +72,15 @@ else
   echo "  Linked herdr/config.toml"
 fi
 
+# Mods — this repo is a folder marketplace, so installed mods are read from it (edit + /reload-plugins)
+if command -v claude >/dev/null 2>&1; then
+  # Re-runs find both already there; that is not a failure.
+  claude plugin marketplace add "$SCRIPT_DIR" >/dev/null 2>&1 && echo "  Added marketplace: claude-config" || true
+  claude plugin install crew-board@claude-config >/dev/null 2>&1 && echo "  Installed mod: crew-board" || echo "  crew-board not installed (already installed?)"
+else
+  echo "  Skipped mods (claude not on PATH): claude plugin marketplace add $SCRIPT_DIR && claude plugin install crew-board@claude-config"
+fi
+
 # Plugins — install from official marketplace
 PLUGINS=(
   "superpowers"

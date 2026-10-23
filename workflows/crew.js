@@ -7,6 +7,7 @@ export const meta = {
     { title: 'Plan', detail: 'at most 3 vertical slices' },
     { title: 'Implement', detail: 'one implementer per slice, hand-offs when cut off, one fix round' },
     { title: 'Review', detail: 'strict review per slice, then one whole-branch review' },
+    { title: 'Wrap-up', detail: 'landing note for the orchestrator (Sonnet)' },
   ],
 }
 
@@ -84,7 +85,8 @@ if (args.slices) {
   }
   const preview = args.fromPreview ? `\n\nThe branch already holds an unreviewed preview commit (\`git -C ${WT} log --oneline -5\`): the owner accepted its look. Build on it; the slices must bring it up to the rules and to every gate and evidence command ${CONFIG} names, since nothing reviewed it yet.` : ''
   plan = await agent(`${COMMON}\n\nYou are the planner. Read the reports below, then the files they point to in ${WT}. Produce as FEW vertical slices as the work needs (at most 3), ordered by value per effort, that together deliver the owner's request; later slices may build on earlier ones. Use ONE slice whenever one agent can do the whole request in ~60 tool calls: every extra slice costs a full implement and review round. Each slice must fit one agent in ~60 tool calls and have objective acceptance checks (the tests/evidence ${CONFIG} names, plus ${SHOW} for the reviewer to LOOK at). Where the owner left a design choice open, pick a sensible default and list it in decisions (one line each: the choice and why). Write the plan to ${NOTES}-plan.md (reports' key findings condensed to ≤40 lines, decisions listed, then each slice in full: title, goal, steps, acceptance, files, so a later session can resume from it), commit on ${branch}.${preview}\n\n${reports}`,
-    { label: tag('planner'), phase: 'Plan', schema: SLICES })
+    // Fable plans: slice sizing decides cut-offs and stops; compare runs with crew-stats.py.
+    { label: tag('planner'), phase: 'Plan', schema: SLICES, model: 'fable' })
   if (!plan) return { error: 'planner failed; nothing implemented' }
 }
 log(`plan: ${plan.slices.map(s => s.title).join(' | ')}`)
@@ -94,9 +96,16 @@ const VERDICT = {
   properties: { pass: { type: 'boolean' }, unfinished: { type: 'boolean' }, summary: { type: 'string' }, fixes: { type: 'string' }, evidence: { type: 'string' } },
   required: ['pass', 'unfinished', 'summary', 'fixes', 'evidence'],
 }
-const reviewPrompt = (scope, report) => `${COMMON}\n\nYou are a strict reviewer for ${scope} on branch ${branch} in ${WT}.\n\nLatest implementer report:\n${report}\n\nFIRST check the work is finished: the report is non-empty, \`git -C ${WT} status\` is clean, HEAD is pushed if the branch has an upstream, and the evidence ran on HEAD (where ${CONFIG} names an evidence stamp or CI record, its commit equals HEAD; else the report names the commit each check ran on). If any of these fails, stop there: pass=false, unfinished=true, fixes = exactly what is missing (uncommitted files, unpushed commits, evidence to run), no full review. Otherwise unfinished=false and verify independently: git -C ${WT} log/diff; run every gate, test and evidence command ${CONFIG} names for this change (a section marked none is skipped); check its rules and that the kept-in-sync docs are updated. If the slice has something to show, open ${SHOW} yourself (take it if missing) and LOOK at it, not just at its exit code. Does it actually deliver the owner's request, or only on paper? Be honest and concrete. Do not edit code. pass=true only if every command ${CONFIG} names for this change passes, rules hold and the result clearly does what it promises. fixes = concrete list (empty if pass).`
+const reviewPrompt = (scope, report) => `${COMMON}\n\nYou are a strict reviewer for ${scope} on branch ${branch} in ${WT}.\n\nLatest implementer report:\n${report}\n\nFIRST check the work is finished: the report is non-empty, \`git -C ${WT} status\` is clean, HEAD is pushed if the branch has an upstream, and the evidence ran on HEAD (where ${CONFIG} names an evidence stamp or CI record, its commit equals HEAD; else the report names the commit each check ran on). If any of these fails, stop there: pass=false, unfinished=true, fixes = exactly what is missing (uncommitted files, unpushed commits, evidence to run), no full review. Otherwise unfinished=false and verify independently: git -C ${WT} log/diff; for every gate, test and evidence command ${CONFIG} names for this change (a section marked none is skipped), trust a pass the report shows on HEAD and re-run it only when it ran on an older commit, the report is thin, or you doubt it; of a slow suite run only the part the change touches, by name; check its rules and that the kept-in-sync docs are updated. If the slice has something to show, open ${SHOW} yourself (take it if missing) and LOOK at it, not just at its exit code. Does it actually deliver the owner's request, or only on paper? Be honest and concrete. Do not edit code. pass=true only if every command ${CONFIG} names for this change passes, rules hold and the result clearly does what it promises. fixes = concrete list (empty if pass).`
 const passed = r => !!r && (r.pass || !!(r.final && r.final.pass))
 const IMPL = { phase: 'Implement', agentType: args.implementer || 'general-purpose' }
+// Wrap-up: one cheap agent gathers what the orchestrator needs to land the branch.
+const WRAPUP = `${COMMON}\n\nYou are the wrap-up agent: every slice passed review. Write ${NOTES}-landing.md, the note the orchestrator lands from, following the "Landing" section of ${CONFIG} (when it is missing or says none, write only the first two items):\n` +
+  `- bump: major / minor / patch and why, from \`git -C ${WT} log\` since the branch left the default branch and the version rules in ${CONFIG} Rules (a \`type!:\` subject or \`BREAKING CHANGE:\` footer is major, a feat minor, else patch).\n` +
+  `- show: 1-2 artifacts (path + one-line caption) of what the branch adds, picked from the ones implementers and reviewers cited. Open EACH and LOOK before listing it; drop any that does not plainly show the change. "none" when nothing visible changed.\n` +
+  `- the lines that section asks for (a changelog or README line, a "To test" line for what only a person can judge), in the style of the existing ones.\n` +
+  `Do not edit version files, the changelog, README or the ticket tracker: the orchestrator applies the note on the default branch. Commit as \`docs: ${slug} landing note\`. Return ≤8 lines: bump and why, artifacts (path + caption), the lines, last commit.`
+const wrapUp = () => { phase('Wrap-up'); return agent(WRAPUP, { label: tag('wrap-up'), phase: 'Wrap-up', model: 'sonnet' }) }
 
 // An empty report means the implementer hit its turn cap mid-slice (agents can't see their turn
 // count, so "stop near the limit" never works). Hand off from the dirty tree instead: at most
@@ -147,10 +156,11 @@ for (let i = start; i < plan.slices.length; i++) {
   const firstPrompt = atStart && args.fixes
     ? `${COMMON}\n\n${IMPL_RULES}\n\nSlice ${i + 1} is mostly committed on the branch, but the reviewer rejected it. Check git status first (uncommitted work in progress may be there). Finish exactly these, re-run the evidence, commit:\n${args.fixes}\n\nSlice:\n${sliceText}\n\nReturn ≤15 lines: what changed, evidence exit codes, paths of what you showed (if any), last commit.`
     : atStart && args.reviewFirst ? null
-    : `${COMMON}\n\n${IMPL_RULES}\n\nImplement this slice (full plan: ${NOTES}-plan.md; earlier slices are already on the branch):\n${sliceText}\n\nEvidence before you finish: the gate, tests and evidence commands ${CONFIG} names for what you touched, plus ${SHOW} when the acceptance asks for it, which you LOOK at. Commit. Return ≤15 lines: what changed, test names, evidence exit codes, paths of what you showed (if any), last commit, untested bits.`
+    : `${COMMON}\n\n${IMPL_RULES}\n\nImplement this slice (full plan: ${NOTES}-plan.md; earlier slices are already on the branch):\n${sliceText}\n\nEvidence before you finish: the gate, tests and evidence commands ${CONFIG} names for what you touched, plus ${SHOW} when the acceptance asks for it, which you LOOK at. Use the narrowest check that covers what you touched, never a whole slow suite for one part of it. Report each check with the commit it ran on. Commit. Return ≤15 lines: what changed, test names, evidence exit codes, paths of what you showed (if any), last commit, untested bits.`
   results.push(await runSlice(i, s, sliceText, firstPrompt))
   if (!passed(results[results.length - 1].review)) {
-    log(`slice ${i + 1} NOT passed; stopping`)
+    const skipped = plan.slices.slice(i + 1).map(x => x.title)
+    log(`slice ${i + 1} NOT passed; stopping${skipped.length ? `, skipped: ${skipped.join(' | ')}` : ''}`)
     // `resume` merges over the original args (`{ ...args, ...resume }`; both keys always set, so an
     // older fix list never survives): a fix list when the reviewer left one, else review first.
     const r = results[results.length - 1].review
@@ -172,4 +182,5 @@ const final = plan.slices.length > 1
 const resume = final && !final.pass ? { slices: [...plan.slices, { title: 'Fix the branch review', goal: final.summary,
   steps: final.fixes, acceptance: 'Every fix the branch reviewer listed is done; every command crew.md names passes.', files: 'as the fixes name' }],
   start: plan.slices.length, fixes: '', reviewFirst: false } : undefined
-return { planSummary: plan.summary, decisions: plan.decisions, results, branchReview: final, resume }
+const landing = resume ? null : await wrapUp()
+return { planSummary: plan.summary, decisions: plan.decisions, results, branchReview: final, resume, landing }

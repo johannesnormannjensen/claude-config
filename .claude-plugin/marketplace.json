@@ -1,0 +1,6 @@
+{
+  "name": "claude-config",
+  "owner": { "name": "Johannes Normann Jensen" },
+  "description": "Mods from claude-config: the crew board",
+  "plugins": [{ "name": "crew-board", "source": "./mods/crew-board" }]
+}

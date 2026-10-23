@@ -1,6 +1,6 @@
 ---
 name: crew
-description: Use when the owner types /crew <request>, /crew init, says to start a ticket ("start T12", "start what makes sense"), to continue or resume a crew ("continue", or a slug that already has a worktree), or asks for "the usual research, plan, implement, review flow" on a feature in any git repo. Runs the crew or preview workflow on its own branch and worktree, then the orchestrator verifies and merges.
+description: Use when the owner types /crew <request>, /crew init, says to start a ticket ("start T12", "start what makes sense"), to continue or resume a crew ("continue", or a slug that already has a worktree), answers a landing ("Yes", "A", "B"), or asks for "the usual research, plan, implement, review flow" on a feature in any git repo. Runs the fast lane (one implementer), the crew or the preview workflow on its own branch and worktree, then the orchestrator verifies and merges.
 ---
 
 # /crew: research → plan → implement → review
@@ -17,7 +17,7 @@ verify and merge.
 | `/crew quick: <request>` | audit-only research (~30 min); strip the prefix from `ask` |
 | `/crew preview: <request>` | one agent, the smallest change worth showing (~20-30 min) |
 | `/crew init` | write `.claude/crew.md` for this repo, nothing else |
-| "start T12" | start a ticket from the tracker crew.md names, with its `workflow:` field |
+| "start T12" | start a ticket from the tracker crew.md names, with its `workflow:` field (`fast` = one implementer, no planner or reviewer) |
 | "continue" | Resume below |
 
 ## Which message does what
@@ -26,12 +26,20 @@ The Workflow harness shows every crew agent the owner's **latest chat message** 
 request" and tells it that message wins over the script's task. A guard line in the prompt does
 not beat it. Crews launched in the wrong turn have built the wrong feature. So:
 
+| The owner writes | You do |
+|---|---|
+| Ideas, a batch, a design pasted from another chat, "add a ticket" | the `crew-ticket` skill: relay, questions, wait. It launches nothing |
+| `1. yes 2. …` answers | still `crew-ticket`: write the tickets, stop. "Continue" in there is not a resume |
+| "Start what makes sense" | Launch below, for every ticket that qualifies. While crew.md's "To test" list is over its play-check limit: print those lines and run only work that lands nothing on the default branch (reviews, analysis, drafts) |
+| `/crew …`, "start T12" | Launch below, for that one (the only way a ticket starts while "To test" is over the limit) |
+| "Yes", "A", "B", "Perfect" | the landing or choice you just showed. Launch nothing in that turn |
+| "Continue", or a slug that already has a worktree | Resume below. Never for previews |
+
 - Launch only in the turn whose owner message is the start and nothing else (`/crew …`,
   "start T12"). Never in a turn that answers a question, says "Yes", or talks about another feature.
 - Never ask "should I start X?": a "Yes" would launch in the wrong turn. Say "X is next" and wait.
 - `ask` is the owner's request or the ticket's full text from the tracker, copied verbatim, never
   a later chat sentence.
-- Ideas and "add a ticket" go to the `crew-ticket` skill, which writes tickets and launches nothing.
 
 ## 0. Setup (first run in a repo, or `/crew init`)
 
@@ -70,6 +78,8 @@ that is not on `$BASE` is invisible to the crew, and its agents stop with "crew.
    Tx" merged), has no worktree in `git worktree list`, and is a build. A ticket saying "verify" or
    "no code" is not a build: ask the owner. The workflow comes from its `workflow:` field
    (crew.md "Workflow field"); no field means `crew:full`, or the mapping crew.md gives.
+   Never start a ticket whose landing would change a system an open "To test" line names,
+   unless the owner asked for that change.
 2. **Slots.** At most 2 crews running at once, previews included. With more, timing-sensitive
    checks fail under load and each false failure costs a fix round. Say which wait.
 3. **Overlap.** If a running crew owns the same module or files, or the ticket waits on it, hold it
@@ -89,6 +99,10 @@ that is not on `$BASE` is invisible to the crew, and its agents stop with "crew.
    them from there:
    `mkdir -p $ROOT/.claude/workflows && cp ~/.claude/workflows/{crew,preview}.js $ROOT/.claude/workflows/ && printf '%s\n' .claude/workflows/crew.js .claude/workflows/preview.js >> $ROOT/.git/info/exclude`
    then `Workflow({ scriptPath: '$ROOT/.claude/workflows/crew.js', args })`.
+   - fast: no workflow. One `Agent({ subagent_type: <implementer or general-purpose>, run_in_background: true })`
+     whose prompt holds the ticket's full text, the worktree, crew.md's checks for what it touches
+     and "this run plus at most one fix round". Land it by hand (§2). Still red after the fix
+     round: park it for the owner with the failing command and its log tail.
    - crew: `args = { slug, worktree, branch: slug, ask, goal, depth: 'full'|'quick', implementer }`, plus `fromPreview: true` when the branch came from a preview.
    - preview: `args = { slug: 'preview-<slug>', worktree, branch: 'preview-<slug>', ask, goal, implementer }`.
    `goal` = one plain line for the progress view ("T12: export to CSV"). `ask` may end with
@@ -102,7 +116,8 @@ that is not on `$BASE` is invisible to the crew, and its agents stop with "crew.
 Read the result: `decisions` (calls made on the owner's behalf), `results` (one per slice; its
 `review` is one verdict, or `{ first, final, reviews, continues }` after hand-offs or a fix
 round), `branchReview` (null for a one-slice run: not required, its slice review covered the
-branch) and `resume` (only when something failed). The per-agent journal path in the
+branch), `resume` (only when something failed) and `landing` (the wrap-up agent's note,
+`.claude/research/<slug>-landing.md`: bump, artifacts to show, the lines crew.md "Landing" asks for). The per-agent journal path in the
 notification has every full report.
 
 - **Preview:** show the note and open each artifact it made (LOOK first). Accepted: start a crew from
@@ -116,8 +131,11 @@ notification has every full report.
   2. Merge `--no-ff` into `$DEFAULT`. The merge commit message is the conclusion: one line on what
      landed, the planner's `decisions` as bullets, what is untested, and where the full notes live
      (`git show <slug-branch-tip>~1:.claude/research/<slug>-plan.md`, with the hash written out).
-  3. Push if there is a remote, `git worktree remove`.
+  3. Apply the landing note on `$DEFAULT` (version bump, changelog line, "To test" line) in the
+     same push, the way crew.md "Landing" says. A fast-lane ticket lands the same way, minus notes.
+  4. Push if there is a remote, `git worktree remove`.
   Report honestly per slice: passed / failed and why, what is untested.
+  When "To test" reaches crew.md's batch size, run its test batch alone (no crew building meanwhile).
 - **A slice or the branch review failed:** run `crew` again with `{ ...originalArgs, ...result.resume }`.
   Research and planning are skipped. For a failed slice, `resume` carries the reviewer's fix list,
   or `reviewFirst: true` when there is none (a cut-off implementer). For a failed branch review,
@@ -161,6 +179,11 @@ on the default branch and commit (and push, with a remote).
 prints wall time, agent-time per phase, review outcomes, cut-off implementers and stopped runs;
 `--csv` for one row per run. Measure before changing models or caps. The records' `tokens` field
 leaves out cache reads, so it is not a cost number.
+
+The `crew-board` mod (`/crew-board`) keeps a pane open with the running worktrees, the "To test"
+count, open tickets, version and last release, and where the time goes (tool time by kind,
+whole runs, slowest calls, owner wait). It also refuses a crew launch in a turn whose owner
+message is not a start, and past the slot limit.
 
 ## Rules
 
