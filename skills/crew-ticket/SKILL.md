@@ -60,7 +60,7 @@ pull first. Take the next free number from the tracker as it is now (other sessi
 
 - **Title** (owner date, one workflow value, after/before which tickets). Copy only the value
   from the "Workflow field" section, written as `workflow: preview`, `workflow: fast`,
-  `workflow: crew:quick`, or `workflow: crew:full`. Do not copy the explanation after it. That
+  or `workflow: crew:full`. Do not copy the explanation after it. That
   field wins over a conflicting sentence in the body.
 - what and why, in the owner's terms, then the confirmed decisions as concrete rules
 - pointers: files and constants the crew starts from
