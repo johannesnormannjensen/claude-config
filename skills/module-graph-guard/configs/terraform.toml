@@ -1,0 +1,30 @@
+# Terraform modules plus environments, helm charts and the shell scripts that deploy them.
+title = "Infrastructure"
+presets = ["terraform", "k8s"]
+include = ["**/*.tf", "**/Chart.yaml", "**/kustomization.yaml", "**/*.sh"]
+tests = ["**/tests/**", "**/*.test.sh"]     # the default would also drop an env named test/
+modules = [
+  { match = "modules/{module}/**", name = "tf:{module}" },
+  { match = "envs/{module}/**", name = "env:{module}" },
+  { match = "charts/{module}/**", name = "chart:{module}" },
+]
+hubs = ["tf:network"]
+
+# shell: `source "$DIR/../lib.sh"`
+[[extract]]
+files = "**/*.sh"
+regex = '^\s*(?:source|\.)\s+"?\$\{?DIR\}?/(?P<path>[^"\s]+)'
+
+# environments never name each other
+[[rules.layer]]
+module = "env:staging"
+may_use = ["tf:network", "tf:cluster", "tf:buckets", "chart:web"]
+[[rules.layer]]
+module = "env:prod"
+may_use = ["tf:network", "tf:cluster", "tf:buckets", "chart:web"]
+
+[page]
+groups = [
+  { name = "envs", members = ["env:staging", "env:prod"] },
+  { name = "terraform", members = ["tf:network", "tf:cluster", "tf:buckets"] },
+]

@@ -1,0 +1,30 @@
+# One Rust crate, a module per src/<name>.rs or src/<name>/.
+title = "Shop modules"
+command = "python3 tools/depgraph.py"      # how messages tell agents to rerun
+presets = ["rust"]
+include = ["src/**/*.rs"]
+tests = ["src/**/tests/**", "src/**/*_tests.rs"]   # plus `#[cfg(test)]` items and mod files, always
+modules = [{ match = "src/{module}/**" }]   # src/billing.rs and src/billing/x.rs are both `billing`
+hubs = ["config", "storage"]                # --diff marks a new edge into these
+baseline = "depgraph-baseline.txt"
+html = "target/depgraph/modules.html"
+
+# The domain layer names nothing but its types.
+[[rules.layer]]
+module = "domain"
+may_use = ["types"]
+
+# Raw SQL lives in storage only.
+[[rules.pattern]]
+files = "src/**/*.rs"
+forbid = '\bsqlx::query'
+allow_under = ["src/storage/"]
+message = "raw queries stay under src/storage/"
+
+[page]
+shared = ["types", "config"]               # the "edges into ..." checkbox; hidden by default
+groups = [
+  { name = "edge", color = "#d4b36a", members = ["api", "cli"] },
+  { name = "core", color = "#3dbeb6", members = ["billing", "domain", "search"] },
+  { name = "platform", color = "#a394d6", members = ["storage", "config", "types"] },
+]

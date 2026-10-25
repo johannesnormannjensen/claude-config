@@ -1,0 +1,20 @@
+# pnpm/yarn/npm workspaces: each packages/<name> and apps/<name> is a module, resolved by
+# its package.json "name" (bare imports) or by path (relative imports).
+title = "Workspace packages"
+presets = ["js"]
+exclude = ["**/dist/**", "**/build/**", "**/*.d.ts", "**/*.min.js"]
+modules = [
+  { match = "packages/{module}/**" },
+  { match = "apps/{module}/**", name = "app:{module}" },
+]
+hubs = ["ui", "config"]
+
+[[rules.layer]]
+module = "core"
+may_use = []                               # core imports no other package
+
+[page]
+groups = [
+  { name = "apps", members = ["app:web", "app:admin"] },
+  { name = "libs", members = ["core", "ui", "config", "api-client"] },
+]

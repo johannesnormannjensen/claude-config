@@ -39,6 +39,7 @@ Six plugins are enabled:
 ### Skills (`skills/`)
 
 - **Omarchy** — comprehensive knowledge of the [Omarchy](https://omarchy.com) Linux desktop environment (Arch Linux + Hyprland), including safe configuration patterns, command discovery, and troubleshooting.
+- **Module graph guard** (`skills/module-graph-guard/`) — sets up `depgraph.py` (Python 3.11+, stdlib only) in any repo. It maps which module names which, with presets for Rust, Python, JS/TS, Java/Kotlin, Go, C# and Terraform plus regex extractors for anything else. Agents get text views (summary, one module, one pair file by file). People get an offline HTML page. `--check` enforces layer rules and a baseline of two-way pairs that only shrinks, and `--diff a...b` lists the edges a branch adds.
 
 ### Crew workflow (`skills/crew/`, `workflows/crew.js`, `workflows/preview.js`)
 

@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Modules</title>
+<style>
+html, body { margin: 0; height: 100%; }
+body {
+  display: flex;
+  background: #141412;
+  color: #e6e1d4;
+  font: 13px/1.4 "Segoe UI", sans-serif;
+  user-select: none;
+}
+aside {
+  width: 292px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1b1a16;
+  border-right: 1px solid #34322b;
+  padding: 16px 14px 12px;
+  box-sizing: border-box;
+}
+.brand { font-family: Palatino, Georgia, serif; font-size: 22px; line-height: 1.1; }
+.muted { color: #8d9078; }
+#counts { margin-top: 4px; font-size: 12px; color: #b7b2a4; }
+#q {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 10px 0 8px;
+  padding: 6px 8px;
+  background: #121210;
+  color: #e6e1d4;
+  border: 1px solid #3a382f;
+  border-radius: 5px;
+  font: 13px ui-monospace, monospace;
+}
+#q:focus { outline: 1px solid #3dbeb6; border-color: #3dbeb6; }
+.opt {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: #b7b2a4;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.opt input { margin-top: 2px; accent-color: #3dbeb6; }
+.depth { display: flex; gap: 4px; align-items: center; margin: 10px 0; }
+.depth button, #tools button {
+  background: #1c1b17;
+  color: #e6e1d4;
+  border: 1px solid #3a382f;
+  border-radius: 5px;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 8px;
+  cursor: pointer;
+  font: 12px ui-monospace, monospace;
+}
+.depth button.on { background: #243330; border-color: #3dbeb6; }
+.depth button:hover, #tools button:hover { border-color: #6a6558; }
+.hint { color: #8d9078; font-size: 12px; line-height: 1.4; margin-bottom: 8px; }
+.gh {
+  margin: 12px 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#list { overflow: auto; flex: 1; min-height: 0; }
+#list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: #e6e1d4;
+  font: 12px ui-monospace, monospace;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+#list button.on { background: #243330; }
+#list button:hover { background: #26241e; }
+#stage { position: relative; flex: 1; min-width: 0; background: #121210; }
+#svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#svg.panning, #svg.panning .node { cursor: grabbing; }
+#tools { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; }
+.band, .col, .edge { pointer-events: none; }
+.col { font: 11px "Segoe UI", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+.node text { fill: #e6e1d4; font: 12px ui-monospace, monospace; pointer-events: none; }
+.node { cursor: pointer; }
+.node.dim { opacity: 0.16; }
+.node.miss { opacity: 0.07; }
+.node.sel rect.body { stroke-width: 2.4; fill: #2c2a24; }
+.edge { fill: none; stroke: #8b8f78; stroke-width: 1.1; opacity: 0.28; vector-effect: non-scaling-stroke; }
+.edge.hot { stroke: #d9d3c2; stroke-width: 1.45; opacity: 0.92; }
+.edge.both { stroke: #e08a62; stroke-width: 1.4; opacity: 0.88; }
+#card {
+  flex: none;
+  max-height: 32%;
+  overflow: auto;
+  margin: 0 0 8px;
+  background: #141412;
+  border: 1px solid #3a382f;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  user-select: text;
+}
+#card[hidden], .opt[hidden] { display: none; }
+.card-h b { font-family: ui-monospace, monospace; font-size: 14px; }
+.files { margin-top: 8px; }
+.files-h { color: #8d9078; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+.row { margin-top: 1px; }
+.jump {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #e6e1d4;
+  font: 12px ui-monospace, monospace;
+  cursor: pointer;
+}
+.jump:hover { color: #3dbeb6; }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand" id="brand"></div>
+  <div class="muted" id="counts"></div>
+  <input id="q" placeholder="search" autocomplete="off">
+  <label class="opt" id="sharedopt"><input type="checkbox" id="shared"> <span id="sharedlbl"></span></label>
+  <div class="depth" id="depth">
+    <span class="muted">trace</span>
+    <button type="button" data-d="1" class="on">1</button>
+    <button type="button" data-d="2">2</button>
+    <button type="button" data-d="0">all</button>
+  </div>
+  <div class="hint">Arrow points at the module it names. Drag to pan, wheel to zoom, click to pin.</div>
+  <div id="card" hidden></div>
+  <div id="list"></div>
+</aside>
+<div id="stage">
+  <svg id="svg"><defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1.2 L 8 5 L 0 8.8 z" fill="context-stroke"></path>
+    </marker>
+  </defs><g id="world"></g></svg>
+  <div id="tools">
+    <button id="zin" type="button">+</button>
+    <button id="zout" type="button">−</button>
+    <button id="fit" type="button">fit</button>
+  </div>
+</div>
+<script>
+const DATA = /*DATA*/null;
+const FOCUS = DATA.focus || "";
+
+const SVGNS = "http://www.w3.org/2000/svg";
+const SHARED = new Set(DATA.shared || []);
+const PALETTE = ["#9aa3ad", "#d4b36a", "#e08a62", "#3dbeb6", "#8aab62", "#a394d6", "#c97b9a", "#6fa3d8"];
+const GROUPS = (DATA.groups || []).map((g, i) => [g.name, g.color || PALETTE[i % PALETTE.length], g.members || []]);
+const COLOR = { other: "#8d9078" };
+const GROUP_OF = {};
+for (const [name, color, members] of GROUPS) {
+  COLOR[name] = color;
+  for (const member of members) GROUP_OF[member] = name;
+}
+document.title = DATA.title;
+document.getElementById("brand").textContent = DATA.title;
+if (SHARED.size) document.getElementById("sharedlbl").textContent = "edges into " + [...SHARED].join(", ");
+else document.getElementById("sharedopt").hidden = true;
+const ORDER = GROUPS.map(g => g[0]).concat(["other"]);
+function groupOf(name) { return GROUP_OF[name] || "other"; }
+
+const NW = 176, NH = 28, COL_W = 240, ROW_H = 40, PAD = 40, HEAD = 26, MAX_ROWS = 24;
+const svg = document.getElementById("svg");
+const world = document.getElementById("world");
+const list = document.getElementById("list");
+const q = document.getElementById("q");
+const card = document.getElementById("card");
+
+const modBy = {};
+for (const m of DATA.modules) modBy[m.name] = m;
+const outOf = {}, inOf = {};
+for (const e of DATA.edges) {
+  (outOf[e.from] || (outOf[e.from] = [])).push(e);
+  (inOf[e.to] || (inOf[e.to] = [])).push(e);
+}
+const bothSet = new Set(DATA.both.map(([a, b]) => a < b ? a + "|" + b : b + "|" + a));
+function isBoth(a, b) { return bothSet.has(a < b ? a + "|" + b : b + "|" + a); }
+
+const byGroup = {};
+for (const g of ORDER) byGroup[g] = [];
+for (const m of DATA.modules) byGroup[groupOf(m.name)].push(m.name);
+for (const g of ORDER) byGroup[g].sort();
+
+const pos = {};
+const columns = [];
+let col = 0, maxRows = 0;
+for (const g of ORDER) {
+  const names = byGroup[g];
+  if (!names.length) continue;
+  for (let start = 0; start < names.length; start += MAX_ROWS) {
+    const chunk = names.slice(start, start + MAX_ROWS);
+    columns.push({ g, col, names: chunk, label: start === 0 });
+    chunk.forEach((name, row) => {
+      pos[name] = { x: PAD + col * COL_W, y: PAD + HEAD + row * ROW_H, g };
+    });
+    if (chunk.length > maxRows) maxRows = chunk.length;
+    col += 1;
+  }
+}
+const worldW = PAD + Math.max(col - 1, 0) * COL_W + NW + PAD;
+const worldH = PAD + HEAD + maxRows * ROW_H + PAD;
+
+let cam = { x: 40, y: 24, k: 1 };
+let pinned = "";
+let hover = "";
+let depth = 1;
+let showShared = false;
+let pan = null;
+let panning = false;
+let traced = null;
+
+function el(tag) { return document.createElementNS(SVGNS, tag); }
+function applyCam() {
+  world.setAttribute("transform", "translate(" + cam.x + " " + cam.y + ") scale(" + cam.k + ")");
+}
+function shown() { return hover || pinned; }
+
+const bandsG = el("g");
+const edgesG = el("g");
+const nodesG = el("g");
+world.append(bandsG, edgesG, nodesG);
+
+for (const c of columns) {
+  const band = el("rect");
+  band.setAttribute("class", "band");
+  band.setAttribute("x", PAD + c.col * COL_W - 14);
+  band.setAttribute("y", PAD - 22);
+  band.setAttribute("width", NW + 28);
+  band.setAttribute("height", HEAD + c.names.length * ROW_H + 20);
+  band.setAttribute("rx", 12);
+  band.setAttribute("fill", COLOR[c.g]);
+  band.setAttribute("opacity", "0.06");
+  bandsG.appendChild(band);
+  const label = el("text");
+  label.setAttribute("class", "col");
+  label.setAttribute("x", PAD + c.col * COL_W);
+  label.setAttribute("y", PAD + 4);
+  label.setAttribute("fill", COLOR[c.g]);
+  label.textContent = c.label ? c.g : "";
+  bandsG.appendChild(label);
+}
+for (const m of DATA.modules) {
+  const p = pos[m.name];
+  const g = el("g");
+  g.setAttribute("class", "node");
+  g.setAttribute("data-name", m.name);
+  const title = el("title");
+  title.textContent = m.name + ": " + m.out + " out, " + m.in + " in";
+  const rect = el("rect");
+  rect.setAttribute("class", "body");
+  rect.setAttribute("x", p.x);
+  rect.setAttribute("y", p.y);
+  rect.setAttribute("width", NW);
+  rect.setAttribute("height", NH);
+  rect.setAttribute("rx", 5);
+  rect.setAttribute("fill", "#221f1a");
+  rect.setAttribute("stroke", COLOR[p.g]);
+  rect.setAttribute("stroke-width", "1.25");
+  const text = el("text");
+  text.setAttribute("x", p.x + 10);
+  text.setAttribute("y", p.y + 18);
+  if (m.name.length > 18) text.setAttribute("font-size", "11");
+  text.textContent = m.name;
+  g.append(title, rect, text);
+  g.addEventListener("pointerenter", () => {
+    if (panning || pan) return;
+    hover = m.name;
+    paintGraph();
+  });
+  g.addEventListener("pointerleave", () => {
+    if (hover !== m.name) return;
+    hover = "";
+    paintGraph();
+  });
+  nodesG.appendChild(g);
+}
+
+function matches(name) {
+  const needle = q.value.trim().toLowerCase();
+  return !needle || name.includes(needle);
+}
+function trace(name, maxDepth) {
+  const nodes = new Set([name]);
+  const edgeKeys = new Set();
+  const dist = new Map([[name, 0]]);
+  const queue = [name];
+  while (queue.length) {
+    const n = queue.shift();
+    const d = dist.get(n);
+    if (maxDepth !== 0 && d >= maxDepth) continue;
+    const step = (e, next) => {
+      edgeKeys.add(e.from + ">" + e.to);
+      if (!dist.has(next)) {
+        dist.set(next, d + 1);
+        nodes.add(next);
+        queue.push(next);
+      }
+    };
+    for (const e of outOf[n] || []) step(e, e.to);
+    for (const e of inOf[n] || []) step(e, e.from);
+  }
+  return { nodes, edgeKeys };
+}
+function overview(e) {
+  if (isBoth(e.from, e.to)) return true;
+  if (SHARED.has(e.to) && !showShared) return false;
+  return true;
+}
+function curve(a, b) {
+  const s = pos[a], t = pos[b];
+  const y1 = s.y + NH / 2, y2 = t.y + NH / 2;
+  const x1 = s.x + NW, x2 = t.x;
+  const off = isBoth(a, b) ? (a < b ? 7 : -7) : 0;
+  if (Math.abs(s.x - t.x) < 2) {
+    const bulge = 42;
+    return "M " + x1 + " " + (y1 + off)
+      + " C " + (x1 + bulge) + " " + (y1 + off)
+      + ", " + (x1 + bulge) + " " + (y2 + off)
+      + ", " + x1 + " " + (y2 + off);
+  }
+  const left = x2 < x1;
+  const dx = Math.max(36, Math.abs(x2 - x1) * (left ? 0.2 : 0.45));
+  const bow = left ? Math.max(-48, Math.min(48, (y2 - y1) * 0.2 || -16)) : 0;
+  return "M " + x1 + " " + (y1 + off)
+    + " C " + (left ? x1 + 24 : x1 + dx) + " " + (y1 + off + bow)
+    + ", " + (left ? x2 - 24 : x2 - dx) + " " + (y2 + off + bow)
+    + ", " + x2 + " " + (y2 + off);
+}
+function paintGraph() {
+  const active = shown();
+  traced = active ? trace(active, depth) : null;
+  edgesG.replaceChildren();
+  const drawn = [];
+  for (const e of DATA.edges) {
+    const on = traced ? traced.edgeKeys.has(e.from + ">" + e.to) : overview(e);
+    if (on) drawn.push(e);
+  }
+  drawn.sort((a, b) => (isBoth(a.from, a.to) ? 1 : 0) - (isBoth(b.from, b.to) ? 1 : 0));
+  for (const e of drawn) {
+    const path = el("path");
+    path.setAttribute("class", "edge" + (isBoth(e.from, e.to) ? " both" : "") + (traced ? " hot" : ""));
+    path.setAttribute("d", curve(e.from, e.to));
+    path.setAttribute("marker-end", "url(#arrow)");
+    edgesG.appendChild(path);
+  }
+  for (const node of nodesG.children) {
+    const name = node.getAttribute("data-name");
+    const cls = ["node"];
+    if (traced && !traced.nodes.has(name)) cls.push("dim");
+    if (!matches(name)) cls.push("miss");
+    if (name === pinned) cls.push("sel");
+    node.setAttribute("class", cls.join(" "));
+  }
+}
+function paintList() {
+  const needle = q.value.trim().toLowerCase();
+  list.replaceChildren();
+  for (const g of ORDER) {
+    const names = byGroup[g].filter(n => !needle || n.includes(needle));
+    if (!names.length) continue;
+    const head = document.createElement("div");
+    head.className = "gh";
+    head.style.color = COLOR[g];
+    head.textContent = g;
+    list.appendChild(head);
+    for (const name of names) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      if (name === pinned) btn.className = "on";
+      btn.textContent = name;
+      btn.title = modBy[name].out + " out, " + modBy[name].in + " in";
+      btn.onclick = () => pin(name, true);
+      list.appendChild(btn);
+    }
+  }
+}
+function edgeBlock(title, edges, nameOf) {
+  const div = document.createElement("div");
+  div.className = "files";
+  const head = document.createElement("div");
+  head.className = "files-h";
+  head.textContent = title + (edges.length ? " " + edges.length : "");
+  div.appendChild(head);
+  if (!edges.length) {
+    const empty = document.createElement("div");
+    empty.className = "muted";
+    empty.textContent = "none";
+    div.appendChild(empty);
+    return div;
+  }
+  for (const e of edges) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const jump = document.createElement("button");
+    jump.type = "button";
+    jump.className = "jump";
+    const other = nameOf(e);
+    jump.textContent = other + (isBoth(e.from, e.to) ? " ↔" : "");
+    jump.onclick = () => pin(other, true);
+    const files = document.createElement("span");
+    files.className = "muted";
+    const extra = e.files.length > 3 ? "  +" + (e.files.length - 3) : "";
+    files.textContent = "  " + e.files.slice(0, 3).join("  ") + extra;
+    row.append(jump, files);
+    div.appendChild(row);
+  }
+  return div;
+}
+function paintCard() {
+  if (!pinned) {
+    card.hidden = true;
+    card.replaceChildren();
+    return;
+  }
+  const outs = (outOf[pinned] || []).slice().sort((a, b) => b.files.length - a.files.length || a.to.localeCompare(b.to));
+  const ins = (inOf[pinned] || []).slice().sort((a, b) => b.files.length - a.files.length || a.from.localeCompare(b.from));
+  card.hidden = false;
+  card.replaceChildren();
+  const head = document.createElement("div");
+  head.className = "card-h";
+  const name = document.createElement("b");
+  name.textContent = pinned;
+  const meta = document.createElement("span");
+  meta.className = "muted";
+  meta.textContent = "  " + groupOf(pinned) + " · out " + outs.length + " · in " + ins.length;
+  head.append(name, meta);
+  card.append(head, edgeBlock("out", outs, e => e.to), edgeBlock("in", ins, e => e.from));
+}
+function pin(name, center) {
+  pinned = name;
+  hover = "";
+  paintList();
+  paintCard();
+  paintGraph();
+  if (center && name && traced) fitNodes(traced.nodes);
+}
+function fitNodes(names) {
+  const rect = svg.getBoundingClientRect();
+  if (rect.width < 10 || rect.height < 10) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const name of names) {
+    const p = pos[name];
+    if (!p) continue;
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x + NW > maxX) maxX = p.x + NW;
+    if (p.y + NH > maxY) maxY = p.y + NH;
+  }
+  if (minX === Infinity) return;
+  const pad = 72;
+  cam.k = Math.max(0.2, Math.min(1.35, (rect.width - 24) / (maxX - minX + pad * 2), (rect.height - 24) / (maxY - minY + pad * 2)));
+  cam.x = rect.width / 2 - ((minX + maxX) / 2) * cam.k;
+  cam.y = rect.height / 2 - ((minY + maxY) / 2) * cam.k;
+  applyCam();
+}
+function fit() {
+  const rect = svg.getBoundingClientRect();
+  if (rect.width < 10 || rect.height < 10) return;
+  const kx = (rect.width - 48) / worldW;
+  const ky = (rect.height - 48) / worldH;
+  cam.k = Math.max(0.12, Math.min(1.15, kx, ky));
+  cam.x = (rect.width - worldW * cam.k) / 2;
+  cam.y = (rect.height - worldH * cam.k) / 2;
+  applyCam();
+}
+function zoomAt(clientX, clientY, factor) {
+  const rect = svg.getBoundingClientRect();
+  const mx = clientX - rect.left, my = clientY - rect.top;
+  const next = Math.min(2.8, Math.max(0.12, cam.k * factor));
+  const ratio = next / cam.k;
+  cam.x = mx - (mx - cam.x) * ratio;
+  cam.y = my - (my - cam.y) * ratio;
+  cam.k = next;
+  applyCam();
+}
+function whenSized(fn) {
+  const go = () => {
+    if (svg.getBoundingClientRect().width < 10) requestAnimationFrame(go);
+    else fn();
+  };
+  requestAnimationFrame(go);
+}
+
+document.getElementById("counts").textContent =
+  DATA.modules.length + " modules · " + DATA.edges.length + " edges · " + DATA.both.length + " both ways";
+q.addEventListener("input", () => { paintList(); paintGraph(); });
+document.getElementById("shared").addEventListener("change", (ev) => {
+  showShared = ev.target.checked;
+  paintGraph();
+});
+document.getElementById("depth").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button");
+  if (!b) return;
+  depth = Number(b.dataset.d);
+  for (const x of document.querySelectorAll("#depth button")) x.classList.toggle("on", x === b);
+  paintGraph();
+});
+document.getElementById("zin").onclick = () => {
+  const r = svg.getBoundingClientRect();
+  zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2);
+};
+document.getElementById("zout").onclick = () => {
+  const r = svg.getBoundingClientRect();
+  zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2);
+};
+document.getElementById("fit").onclick = fit;
+svg.addEventListener("wheel", (ev) => {
+  ev.preventDefault();
+  zoomAt(ev.clientX, ev.clientY, ev.deltaY < 0 ? 1.12 : 1 / 1.12);
+}, { passive: false });
+svg.addEventListener("pointerdown", (ev) => {
+  if (ev.button !== 0) return;
+  const hit = ev.target.closest(".node");
+  pan = {
+    x: ev.clientX,
+    y: ev.clientY,
+    ox: cam.x,
+    oy: cam.y,
+    moved: false,
+    name: hit ? hit.getAttribute("data-name") : ""
+  };
+  svg.setPointerCapture(ev.pointerId);
+});
+svg.addEventListener("pointermove", (ev) => {
+  if (!pan) return;
+  const dx = ev.clientX - pan.x, dy = ev.clientY - pan.y;
+  if (!pan.moved) {
+    if (Math.hypot(dx, dy) < 4) return;
+    pan.moved = true;
+    panning = true;
+    hover = "";
+    svg.classList.add("panning");
+    paintGraph();
+  }
+  cam.x = pan.ox + dx;
+  cam.y = pan.oy + dy;
+  applyCam();
+});
+svg.addEventListener("pointerup", () => {
+  if (!pan) return;
+  const was = pan;
+  pan = null;
+  panning = false;
+  svg.classList.remove("panning");
+  if (was.moved) return;
+  if (was.name) {
+    pinned = pinned === was.name ? "" : was.name;
+    hover = was.name;
+  } else {
+    pinned = "";
+    hover = "";
+  }
+  paintList();
+  paintCard();
+  paintGraph();
+});
+document.addEventListener("keydown", (ev) => {
+  const typing = document.activeElement === q;
+  if (ev.key === "Escape") {
+    if (typing && q.value) { q.value = ""; paintList(); paintGraph(); return; }
+    pinned = "";
+    hover = "";
+    paintList();
+    paintCard();
+    paintGraph();
+  } else if (ev.key === "/" && !typing) {
+    ev.preventDefault();
+    q.focus();
+  }
+});
+
+paintList();
+paintGraph();
+applyCam();
+if (FOCUS && pos[FOCUS]) {
+  pin(FOCUS, false);
+  whenSized(() => fitNodes(traced.nodes));
+} else {
+  whenSized(fit);
+}
+
+</script>
+</body>
+</html>

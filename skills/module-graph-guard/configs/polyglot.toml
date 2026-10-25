@@ -1,0 +1,23 @@
+# A polyglot repo where each top-level directory is a module: a Java backend, a Go service,
+# Python tooling, a TS frontend. Java/Kotlin resolve by `package`, Go by go.mod path,
+# Python by dotted path, TS by package.json name.
+title = "Repo modules"
+presets = ["java", "go", "python", "js"]
+exclude = ["vendor/**", "third_party/**", "**/generated/**", "**/target/**", "**/dist/**"]
+modules = [{ match = "{module}/**" }]
+
+# Anything else: a regex per file kind. `path` resolves from the file (or the root with
+# relative_to = "root"), `symbol` through what modules declare; `name` labels the edge.
+[[extract]]
+files = "**/Dockerfile"
+regex = '^COPY\s+(?:--from=\S+\s+)?(?P<path>[\w./-]+)'
+relative_to = "root"
+
+# Declare symbols a preset does not see, e.g. protobuf packages imported from Go and Java.
+[[declare]]
+files = "proto/**/*.proto"
+regex = '^package\s+(?P<symbol>[\w.]+);'
+[[extract]]
+files = "**/*.proto"
+regex = '^import\s+"(?P<path>[^"]+)"'
+relative_to = "root"
