@@ -31,6 +31,11 @@ const TOOLS: Record<string, string> = {
 // Session memory of the loops: when each last finished a tool call (main loop is 'main').
 const lastEnd = new Map<string, number>()
 let turnEndedAt = 0
+// The tickets the owner's latest start message named ("start T12 and T14"), and when. A launch
+// in a later turn passes when its prompt names one of them, so a coordinator can chain them.
+// Only the owner's own message sets it; it ends at the next start or after activeHours.
+let chain: { tickets: Set<string>; at: number } = { tickets: new Set(), at: 0 }
+const TICKET = /\bT(\d+)\b/gi
 const SLOWEST_KEPT = 5
 const empty = (since: string): Times => ({ since, cats: {}, runs: {}, pending: {}, slowest: [] })
 let times: Times = empty('')
@@ -174,10 +179,19 @@ async function refresh($: Engine): Promise<Board> {
   return b
 }
 
-// Guardrails: a crew launch only in the owner's start turn, and never past maxSlots worktrees.
-async function guard($: Engine, what: string): Promise<string | undefined> {
+const ticketsIn = (text: string) => new Set([...text.matchAll(TICKET)].map(m => m[1]))
+
+// A launch whose prompt names a ticket of the owner's latest start, within activeHours of it.
+async function inChain($: Engine, prompt: string): Promise<boolean> {
+  if (!chain.tickets.size || (await $.clock.now()) - chain.at > activeHours * 3600_000) return false
+  return [...ticketsIn(prompt)].some(t => chain.tickets.has(t))
+}
+
+// Guardrails: a crew launch only in the owner's start turn (or for a ticket that start named),
+// and never past maxSlots worktrees.
+async function guard($: Engine, what: string, prompt = ''): Promise<string | undefined> {
   const said = await read($, lastPrompt)
-  if (!start.test(said)) {
+  if (!start.test(said) && !(await inChain($, prompt))) {
     return `crew-board: ${what} needs the owner's start message ("start T12"); the latest is: "${said.slice(0, 80)}". Say what is next and wait.`
   }
   const b = await refresh($)
@@ -221,8 +235,10 @@ export const register: Register = (on, options) => {
       await onNotice($, e.text)
     } else if (!e.isMeta && (!e.command || e.command.name === 'crew')) {
       // `/crew …` is itself a start; other slash commands are not the owner's latest word.
-      await update($, lastPrompt, () => (e.command ? `start: /crew ${e.command.args}` : e.text))
+      const said = e.command ? `start: /crew ${e.command.args}` : e.text
+      await update($, lastPrompt, () => said)
       const now = await $.clock.now()
+      if (start.test(said)) chain = { tickets: ticketsIn(said), at: now }
       if (turnEndedAt) add(times.cats, OWNER_WAIT, Math.min(now - turnEndedAt, MAX_OWNER_MS))
       turnEndedAt = 0
     }
@@ -276,7 +292,7 @@ export const register: Register = (on, options) => {
 
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
     if (!guardAgent || e.subagent_type !== guardAgent) return next(e)
-    const deny = await guard($, `a ${guardAgent} launch`)
+    const deny = await guard($, `a ${guardAgent} launch`, String((e as unknown as Record<string, unknown>).prompt ?? ''))
     return deny ? { deny } : next(e)
   }).catch(($, e, next) => (next.called ? next(e) : next(e)))
 
