@@ -1,6 +1,6 @@
 {
   "name": "crew-board",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Crew board: running worktrees, To test count, open tickets, last release, where the time goes; guards crew launches",
   "author": { "name": "Johannes Normann Jensen" },
   "types": "./types/index.d.ts",

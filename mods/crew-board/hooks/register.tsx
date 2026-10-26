@@ -79,10 +79,12 @@ async function flush($: Engine) {
 
 // A background task's done notice: book its time where its start said.
 async function onNotice($: Engine, text: string) {
-  for (const m of text.matchAll(/<task-id>(\w+)<\/task-id>[\s\S]*?<status>(\w+)<\/status>/g)) {
-    const p = times.pending[m[1]]
-    if (!p || m[2] === 'running') continue
-    const ms = Number(/<duration_ms>(\d+)</.exec(text)?.[1] ?? (await $.clock.now()) - p.t0)
+  // One block per task: a prompt can carry several notices, each with its own duration.
+  for (const block of text.split('<task-notification>').slice(1)) {
+    const m = /<task-id>(\w+)<\/task-id>[\s\S]*?<status>(\w+)<\/status>/.exec(block)
+    const p = m && times.pending[m[1]]
+    if (!m || !p || m[2] === 'running') continue
+    const ms = Number(/<duration_ms>(\d+)</.exec(block)?.[1] ?? (await $.clock.now()) - p.t0)
     add(p.isRun ? times.runs : times.cats, p.cat, ms, p.isRun ? undefined : p.what)
     delete times.pending[m[1]]
   }
