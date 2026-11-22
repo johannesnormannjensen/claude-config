@@ -77,10 +77,8 @@ pull first. Take the next free number from the tracker as it is now (other sessi
 
 Keep it dense and plain. Commit the tracker file, and push if there is a remote. If the talk
 settled what a word means, or made a decision that is hard to reverse, surprising without context
-and a real trade-off, also write the glossary entry or decision record where the project's
-AGENTS.md routes them, in the same commit. Name records by date and slug
-(`2026-11-22-short-name.md`), never running numbers, so parallel branches don't collide. Nothing
-routed: skip.
+and a real trade-off, also write the glossary entry or decision record with the domain-modeling skill, in the same
+commit.
 
 ## 5. Report
 Give the ticket number, the workflow value you wrote, its place in the queue, and whether it
