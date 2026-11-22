@@ -26,10 +26,18 @@ In your own words, a few short paragraphs:
   visitors, API callers, operators of the infrastructure, other developers), and why the owner wants it
 - how it fits the current code ("today X does Y in `path`")
 - anything that clashes with an existing rule, system or ticket
+- any word the owner uses in a sense that clashes with the project's glossary (say which you take)
 
 ## 3. Ask (numbered prose, never the AskUserQuestion tool)
+When the idea is a taste call (a look, a sound, wording) or has more than one real approach, the
+first round lays out 2-3 approaches, each with its cost and a sample or reference where one
+exists, plus your pick. Detail questions wait until the owner picks.
+
 At most 5 questions per round, each with your default ("My default is …"), so the owner can
-just say "yes". Ask only where the answer would change what the crew builds. Pick from these,
+just say "yes". Number on from the last round (round two starts at 6), so "3. yes" names one
+question. Ask only what is decidable now: a question whose answer hangs on one still open this
+round waits for the next round. Facts are yours to find (grep, or a subagent for a big lookup);
+the owner gets decisions. Ask only where the answer would change what the crew builds. Pick from these,
 plus the topics under "Tickets → Questions" in `.claude/crew.md`:
 
 - **Experience:** what it looks, reads or feels like to the user; the moment it should land
@@ -67,7 +75,12 @@ pull first. Take the next free number from the tracker as it is now (other sessi
 - out of scope and open ideas
 - done: the evidence that proves it
 
-Keep it dense and plain. Commit only the tracker file, and push if there is a remote.
+Keep it dense and plain. Commit the tracker file, and push if there is a remote. If the talk
+settled what a word means, or made a decision that is hard to reverse, surprising without context
+and a real trade-off, also write the glossary entry or decision record where the project's
+AGENTS.md routes them, in the same commit. Name records by date and slug
+(`2026-11-22-short-name.md`), never running numbers, so parallel branches don't collide. Nothing
+routed: skip.
 
 ## 5. Report
 Give the ticket number, the workflow value you wrote, its place in the queue, and whether it
