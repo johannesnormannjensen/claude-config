@@ -51,7 +51,7 @@ One value per ticket, written by the crew-ticket skill and confirmed by the owne
 - `workflow: preview` — one "Show it" artifact to judge before building; the ticket stays open.
 - `workflow: fast` — one implementer, no planner or reviewer, landed by hand; for small, clear tickets.
 - `workflow: crew:quick` — read this repo, build, review.
-- `workflow: crew:full` — default. The same build after web research.
+- `workflow: full` — default. The same build after web research.
 <Tickets without the field: how to read older wording. A ticket saying "verify" or "no code" is
 never auto-started. Or omit the section.>
 

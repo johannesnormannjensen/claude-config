@@ -1,7 +1,7 @@
 export const meta = {
   name: 'crew',
   description: 'Research, plan, implement and review one feature on its own branch',
-  whenToUse: 'The owner types /crew <request> or starts a ticket whose workflow field is crew:quick or crew:full (the crew skill creates the worktree, then launches this).',
+  whenToUse: 'The owner types /crew <request> or starts a ticket whose workflow field is crew:quick or full (the crew skill creates the worktree, then launches this).',
   phases: [
     { title: 'Research', detail: 'prior art, craft, audit of our code (quick depth: audit only)' },
     { title: 'Plan', detail: 'at most 3 vertical slices' },

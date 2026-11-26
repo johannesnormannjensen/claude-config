@@ -39,7 +39,7 @@ customers are small businesses in the EU, so GDPR and VAT rules apply.
 ## Workflow field
 - `workflow: preview` — one "Show it" artifact to judge before building; the ticket stays open.
 - `workflow: crew:quick` — read this repo, build, review.
-- `workflow: crew:full` — default. The same build after web research.
+- `workflow: full` — default. The same build after web research.
 
 ## Verify before merge
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build`

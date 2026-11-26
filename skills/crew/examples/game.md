@@ -42,7 +42,7 @@ server). Co-op ships over the internet, so assume 80–150 ms latency and some p
 ## Workflow field
 - `workflow: preview` — one "Show it" artifact to judge before building; the ticket stays open.
 - `workflow: crew:quick` — read this repo, build, review.
-- `workflow: crew:full` — default. The same build after web research.
+- `workflow: full` — default. The same build after web research.
 
 ## Verify before merge
 - `cargo test -q`, `scripts/smoke.sh`, `scripts/screenshot.sh all` and look at every changed shot.

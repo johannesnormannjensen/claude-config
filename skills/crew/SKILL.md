@@ -77,10 +77,10 @@ that is not on `$BASE` is invisible to the crew, and its agents stop with "crew.
    offer `crew:quick`. For a ticket: it qualifies when its questions are answered, it is unblocked ("after
    Tx" merged), has no worktree in `git worktree list`, and is a build. A ticket saying "verify" or
    "no code" is not a build: ask the owner. The workflow comes from its `workflow:` field
-   (crew.md "Workflow field"); no field means `crew:full`, or the mapping crew.md gives.
+   (crew.md "Workflow field"); no field means `full`, or the mapping crew.md gives.
    Never start a ticket whose landing would change a system an open "To test" line names,
    unless the owner asked for that change.
-2. **Slots.** At most 2 crews running at once, previews included. With more, timing-sensitive
+2. **Slots.** At most 2 lanes running at once, previews included. With more, timing-sensitive
    checks fail under load and each false failure costs a fix round. Say which wait.
 3. **Overlap.** If a running crew owns the same module or files, or the ticket waits on it, hold it
    until that crew merges and say why.
@@ -106,7 +106,7 @@ that is not on `$BASE` is invisible to the crew, and its agents stop with "crew.
    - crew: `args = { slug, worktree, branch: slug, ask, goal, depth: 'full'|'quick', implementer }`, plus `fromPreview: true` when the branch came from a preview.
    - preview: `args = { slug: 'preview-<slug>', worktree, branch: 'preview-<slug>', ask, goal, implementer }`.
    `goal` = one plain line for the progress view ("T12: export to CSV"). `ask` may end with
-   `(Orchestrator notes: …)`: file pointers, numbers, constraints, other crews running and which
+   `(Orchestrator notes: …)`: file pointers, numbers, constraints, other lanes running and which
    area each owns. `implementer` = crew.md's "Implementer agent", else omit.
 6. Tell the owner in a few lines: slug/branch, workflow, rough duration.
 7. Keep resume notes (run ids, args) in a scratch file: sessions end, runs survive.
@@ -121,7 +121,7 @@ branch), `resume` (only when something failed) and `landing` (the wrap-up agent'
 notification has every full report.
 
 - **Preview:** show the note and open each artifact it made (LOOK first). Accepted: start a crew from
-  the preview branch (`fromPreview: true`; the ticket's field becomes `crew:quick` or `crew:full`).
+  the preview branch (`fromPreview: true`; the ticket's field becomes `crew:quick` or `full`).
   Rejected: `git worktree remove .claude/worktrees/preview-<slug>`.
 - **Everything passed** (no `resume`): verify yourself. Merge the default branch into the crew branch, run
   crew.md's "Verify before merge" commands, open what the reviewers showed (crew.md "Show it") and LOOK.

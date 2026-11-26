@@ -45,7 +45,7 @@ Six plugins are enabled:
 
 `/crew <request>` turns one feature request into a finished branch, in any git repo: a game, a web
 app, a CLI, a library. It runs on its own git worktree, so you keep working (or run several
-crews at once) while it goes:
+lanes at once) while it goes:
 
 1. **Research:** three agents in parallel. *Prior art* (how well-regarded projects solve it),
    *craft* (typical numbers, failure modes, how to measure quality) and an *audit* of your code
@@ -74,15 +74,15 @@ to judge a change: screenshots for a website or game, saved output for a compile
 | `/crew <request>` | full run, about 1 hour |
 | `/crew quick: <request>` | skip outside research (code audit only), about 30 minutes |
 | `/crew preview: <request>` | one agent builds the smallest change worth showing (a screenshot, sample output), so you can judge it first |
-| "start T12" | start a ticket; its `workflow:` field (preview, fast, crew:quick, crew:full) picks the run |
-| "continue" | resume stopped crews found in `git worktree list` |
+| "start T12" | start a ticket; its `workflow:` field (preview, fast, crew:quick, full) picks the run |
+| "continue" | resume stopped lanes found in `git worktree list` |
 
 Needs Claude Code with the Workflow tool, and git. Agents commit after every step (and push if
 the branch has an upstream), so a shutdown loses little: ask Claude to resume the run. If a
 slice fails review twice, the crew stops and returns `resume` args. Claude resumes from there
 without redoing research and planning: from the reviewer's fix list, or with a review first when
 there is none, so finished work isn't rebuilt.
-Run at most two crews at once. Start a crew in a message that says only that: the Workflow tool
+Run at most two lanes at once. Start a lane in a message that says only that: the Workflow tool
 shows every agent your latest chat message, so a crew launched while you talk about something
 else can build the wrong thing. `skills/crew/crew-stats.py` prints run times, review outcomes
 and cut-off implementers from the workflow records.
